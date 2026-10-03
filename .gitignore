@@ -1,0 +1,16 @@
+# ====================================================================
+# Gitignore para Repositorio de Configuración Externa (BR2_EXTERNAL)
+# ====================================================================
+
+# Ignorar archivos intermedios generados al extraer el defconfig de Buildroot
+/defconfig
+
+# Ignorar archivos temporales o de respaldo de editores de texto
+*~
+*.swp
+*.bak
+
+# Ignorar archivos ocultos del sistema operativo anfitrión que puedan colarse
+.DS_Store
+Thumbs.db
+
