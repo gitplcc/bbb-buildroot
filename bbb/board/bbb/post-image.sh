@@ -6,11 +6,10 @@ BOARD_DIR="${BR2_EXTERNAL_BBB_PATH}/board/${BOARD_NAME}"
 
 echo "-> Generando imagen final para el host/arquitectura: ${BOARD_NAME}"
 
-# 1. Copiar los archivos de arranque específicos (si existen) a la carpeta temporal de binarios
-if [ -d "${BOARD_DIR}" ]; then
-    find "${BOARD_DIR}" -type f ! -name "genimage.cfg" -exec cp {} "${BINARIES_DIR}/" \;
+# 1. Copiar los archivos de arranque específicos a la carpeta temporal de binarios
+if [ -d "${BOARD_DIR}/boot_files" ]; then
+    find "${BOARD_DIR}/boot_files" -type f -exec cp {} "${BINARIES_DIR}/" \;
 fi
 
 # 2. Ejecutar genimage apuntando al archivo de configuración de esa placa concreta
 support/scripts/genimage.sh -c "${BOARD_DIR}/genimage.cfg"
-

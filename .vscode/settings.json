@@ -1,0 +1,13 @@
+{
+    "kconfig.env": { 
+        "SRCARCH": "arm" 
+    },
+    "defaultIncludePaths": [
+        "${workspaceFolder}/buildroot/output/host/usr/include",
+        "${workspaceFolder}/buildroot/output/build/linux-custom/include"
+    ],
+    "files.associations": {
+        "*.mk": "makefile",
+        "Config.in*": "kconfig"
+    }
+}

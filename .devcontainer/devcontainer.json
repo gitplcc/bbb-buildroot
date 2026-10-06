@@ -1,0 +1,23 @@
+{
+    "name": "BeagleBone Black Buildroot Dev",
+    "dockerComposeFile": "../compose.yaml",
+    "service": "bbb-buildroot",
+    "workspaceFolder": "/home/br-user/bbb-buildroot-project",
+    "remoteUser": "br-user",
+    "containerEnv": {
+        "BR2_EXTERNAL": "/home/br-user/bbb-buildroot-project/bbb"
+    },
+    "updateContentCommand": "git submodule update --init --recursive",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "microhobby.linuxkerneldev",
+                "ms-vscode.cpptools",
+                "ms-vscode.makefile-tools",
+                "GitHub.copilot",
+                "GitHub.copilot-chat"
+            ]
+        }
+    }
+}
+

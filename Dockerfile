@@ -12,14 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 3. Configurar el usuario 'developer'
-RUN useradd -m -s /bin/bash developer && \
-    echo "developer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# RUN useradd -m -s /bin/bash developer && \
+#     echo "developer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN echo "br-user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-USER developer
-WORKDIR /home/developer/buildroot-project
+USER br-user
+WORKDIR /home/br-user/bbb-buildroot-project
 
-# 4. AUTOMATIZACIÓN: Clonar Buildroot directamente en el contenedor
-RUN git clone --depth 1 --branch 2026.08 https://gitlab.com/buildroot.org/buildroot.git
+CMD ["/bin/bash","-li"]
 
-
-CMD ["/bin/bash"]
