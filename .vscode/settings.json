@@ -1,6 +1,6 @@
 {
-    "kconfig.env": { 
-        "SRCARCH": "arm" 
+    "kconfig.env": {
+        "SRCARCH": "arm"
     },
     "defaultIncludePaths": [
         "${workspaceFolder}/buildroot/output/host/usr/include",

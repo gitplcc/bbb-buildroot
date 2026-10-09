@@ -160,4 +160,3 @@ Abre una terminal de **PowerShell** en Windows 11 para sacar la imagen del volum
 docker cp <id_del_contenedor>:/home/developer/buildroot-project/buildroot_src/output/images/sdcard.img C:\Users\TuUsuario\Downloads\
 ```
 Quema el archivo `sdcard.img` en una MicroSD con **BalenaEtcher**, insértala en la BeagleBone Black y arráncala manteniendo presionado el botón **S2**.
-

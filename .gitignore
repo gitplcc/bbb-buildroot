@@ -13,4 +13,3 @@
 # Ignorar archivos ocultos del sistema operativo anfitrión que puedan colarse
 .DS_Store
 Thumbs.db
-

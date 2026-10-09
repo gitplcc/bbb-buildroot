@@ -29,4 +29,3 @@ RUN mkdir -p -m 0700 $HOME/.ssh \
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["bash"]
-

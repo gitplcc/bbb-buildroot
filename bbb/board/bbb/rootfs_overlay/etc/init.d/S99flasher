@@ -117,7 +117,7 @@ EOF
     echo " Estructura limpia de 2 particiones expandida a los 2GB.  "
     echo " POR FAVOR: Apaga la placa, retira la SD y reinicia.     "
     echo "=========================================================="
-    
+
     # Apagar todos los LEDs de la BeagleBone como señal visual inequívoca de fin de flasheo
     if [ -d /sys/class/leds/beaglebone\:green\:usr0 ]; then
         echo 0 > /sys/class/leds/beaglebone\:green\:usr0/brightness
@@ -130,4 +130,3 @@ EOF
     exit 0
     ;;
 esac
-
