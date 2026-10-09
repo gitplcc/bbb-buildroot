@@ -3,7 +3,8 @@ services:
     build: .
     image: bbb-buildroot
     environment:
-      BR2_EXTERNAL: "/home/br-user/bbb-buildroot-project/bbb"
+      BR2_EXTERNAL: /home/br-user/bbb-buildroot-project/bbb
+      REPO_URL: git@github.com:gitplcc/bbb-buildroot.git
     volumes:
       - data:/home/br-user/bbb-buildroot-project      
     # command: /bin/sh -c "while true; do sleep 3600; done"
