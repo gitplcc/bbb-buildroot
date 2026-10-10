@@ -1,11 +1,15 @@
 {
-    "kconfig.env": {
-        "SRCARCH": "arm"
+    "editor.formatOnSave": true,
+    "editor.formatOnType": false,
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
     },
-    "defaultIncludePaths": [
-        "${workspaceFolder}/buildroot/output/host/usr/include",
-        "${workspaceFolder}/buildroot/output/build/linux-custom/include"
-    ],
+    "[cpp]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+    "C_Cpp.formatting": "clangFormat",
+    "C_Cpp.intelliSenseEngine": "default",
+    "C_Cpp.clang_format_sortIncludes": true,
     "files.associations": {
         "*.mk": "makefile",
         "Config.in*": "kconfig"
