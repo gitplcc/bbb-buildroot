@@ -7,4 +7,3 @@ config BR2_PACKAGE_LECTOR_IIO
 
 comment "lector-iio necesita obligatoriamente la biblioteca libiio"
 	depends on !BR2_PACKAGE_LIBIIO
-

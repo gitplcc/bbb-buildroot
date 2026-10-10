@@ -12,4 +12,3 @@ LECTOR_IIO_DEPENDENCIES = libiio
 LECTOR_IIO_CONF_OPTS = -DCMAKE_BUILD_TYPE=Release
 
 $(eval $(cmake-package))
-

@@ -13,4 +13,3 @@ endif()
 
 include(GNUInstallDirs)
 install(TARGETS lector_iio DESTINATION ${CMAKE_INSTALL_BINDIR})
-
