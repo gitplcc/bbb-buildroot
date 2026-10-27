@@ -10,12 +10,14 @@
     "updateContentCommand": "git submodule update --init --recursive",
     "customizations": {
         "vscode": {
+            "settings": {
+                "editor.formatOnSave": true
+            },
             "extensions": [
                 "microhobby.linuxkerneldev",
-                "ms-vscode.cpptools",
+                "ms-vscode.cpptools-extension-pack",
                 "ms-vscode.makefile-tools",
-                "GitHub.copilot",
-                "GitHub.copilot-chat"
+                "redhat.vscode-yaml"
             ]
         }
     }
