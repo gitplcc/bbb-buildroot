@@ -1,0 +1,5 @@
+# Forzar a Tailscale a usar la API nativa de nftables
+TS_DEBUG_FIREWALL_MODE="nftables"
+
+# Argumentos opcionales para el demonio (por ejemplo, cambiar la ruta del socket)
+TAILSCALED_ARGS=""

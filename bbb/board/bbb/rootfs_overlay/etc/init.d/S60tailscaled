@@ -1,0 +1,50 @@
+#!/bin/sh
+
+DAEMON="tailscaled"
+PIDFILE="/var/run/$DAEMON.pid"
+
+# Read defaults/arguments if they exist
+[ -r /etc/default/tailscaled ] && . /etc/default/tailscaled
+if [ -r /etc/default/tailscaled ]; then
+    . /etc/default/tailscaled
+    export TS_DEBUG_FIREWALL_MODE
+fi
+
+start() {
+    printf "Starting %s: " "$DAEMON"
+    # Ensure mandatory state and runtime directories exist
+    mkdir -p /var/run/tailscale /var/lib/tailscale /var/cache/tailscale
+
+    # Start tailscaled in the background
+    start-stop-daemon -S -b -q -m -p "$PIDFILE" -x /usr/sbin/tailscaled -- $TAILSCALED_ARGS
+    [ $? -eq 0 ] && echo "OK" || echo "FAIL"
+}
+
+stop() {
+    printf "Stopping %s: " "$DAEMON"
+    start-stop-daemon -K -q -p "$PIDFILE"
+    [ $? -eq 0 ] && echo "OK" || echo "FAIL"
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart|reload)
+        restart
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit $?
