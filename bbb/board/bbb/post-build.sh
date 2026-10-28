@@ -1,9 +1,13 @@
 #!/bin/sh
 # $1 (TARGET_DIR) es el primer argumento que Buildroot pasa automáticamente al script
 
-echo "=== Ejecutando Post-Build Script para permitir SSH Root ==="
+set -eu
 
-# Modificar el archivo sshd_config en el sistema de archivos final antes de empaquetar
+# 1. Call the stock BeagleBone script first to do standard setup
+source board/beaglebone/post-build.sh "$@"
+
+# 2. Modify the sshd_config file in the final filesystem before packaging
+echo "=== Executing Post-Build Script to allow SSH Root ==="
 if [ -f "${1}/etc/ssh/sshd_config" ]; then
     sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/' "${1}/etc/ssh/sshd_config"
     sed -i 's/PermitRootLogin.*/PermitRootLogin yes/' "${1}/etc/ssh/sshd_config"
