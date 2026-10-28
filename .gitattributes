@@ -1,1 +1,10 @@
+*.cfg text eol=lf
+*.config text eol=lf
+*.desc text eol=crlf
+*.in text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.mk text eol=crlf
 *.sh text eol=lf
+*.txt text eol=lf
+*.yaml text eol=lf
