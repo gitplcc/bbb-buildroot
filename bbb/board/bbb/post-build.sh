@@ -4,7 +4,7 @@
 set -eu
 
 # 1. Call the stock BeagleBone script first to do standard setup
-source board/beaglebone/post-build.sh "$@"
+board/beagleboard/beaglebone/post-build.sh "$@"
 
 # 2. Modify the sshd_config file in the final filesystem before packaging
 echo "=== Executing Post-Build Script to allow SSH Root ==="
