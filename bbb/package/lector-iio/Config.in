@@ -1,0 +1,9 @@
+config BR2_PACKAGE_LECTOR_IIO
+	bool "lector-iio"
+	select BR2_PACKAGE_LIBIIO
+	help
+	  Custom application in C to read the analog channels of IIO
+	  of the BeagleBone Black.
+
+comment "lector-iio needs the libiio library"
+	depends on !BR2_PACKAGE_LIBIIO

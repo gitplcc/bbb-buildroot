@@ -1,3 +1,0 @@
-menu "Mis Aplicaciones Propias"
-    source "$BR2_EXTERNAL_BBB_PATH/package/lector-iio/Config.in"
-endmenu
