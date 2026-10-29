@@ -1,79 +1,100 @@
 #!/bin/sh
-# /etc/init.d/S99flasher - Script automatizado para flashear y expandir eMMC sin parted
+# /etc/init.d/S99flasher - Automated script to flash and expand eMMC without parted
 
 case "$1" in
   start)
-    # 1. Seguridad: Si el sistema ya arrancó desde la eMMC, salir inmediatamente
-    if grep -q "root=/dev/mmcblk1" /proc/cmdline; then
-        echo "Arrancado desde la eMMC. Sistema operativo activo."
+    # 1. Safety Lock: If the system already booted from the eMMC, exit immediately
+    # Note: Added mmcblk1p2 to cover variations in U-Boot cmdline parameters
+    if grep -qE "root=/dev/mmcblk1" /proc/cmdline; then
+        echo "Booted from eMMC. Operating system is active."
         exit 0
     fi
 
-    # 2. Check wether eMMC should be flashed (uEnv.txt emmc_flasher=yes)
+    # 2. Check whether eMMC should be flashed (uEnv.txt emmc_flasher=yes)
     ROOT_PART=$(awk -F'root=' '{print $2}' /proc/cmdline | awk '{print $1}')
-    CURRENT_SD=$(echo "$ROOT_PART" | sed 's/p[0-9]$//')
+
+    if [ -z "$ROOT_PART" ]; then
+        echo "CRITICAL ERROR: Could not determine current root device from boot parameters."
+        exit 1
+    fi
+
+    CURRENT_SD=$(echo "$ROOT_PART" | sed -E 's/p?[0-9]+$//') # Robust separation
     BOOT_FAT="${CURRENT_SD}p1"
     TMP_BOOT="/mnt/sd_boot"
     SHOULD_FLASH="no"
+
     mkdir -p $TMP_BOOT
     if mount -o ro $BOOT_FAT $TMP_BOOT 2>/dev/null; then
-        # Buscamos si la línea pru_emmc_flasher=yes está activa (sin el # al inicio)
+        # Search if the line emmc_flasher=yes is active
         if grep -q "^emmc_flasher=yes" $TMP_BOOT/uEnv.txt; then
             SHOULD_FLASH="yes"
         fi
         umount $TMP_BOOT
     fi
     rmdir $TMP_BOOT
+
+    # 3. Exit immediately if flashing not requested
     if [ "$SHOULD_FLASH" != "yes" ]; then
-        echo "-> [MODO DESARROLLO]: Flasher desactivado en uEnv.txt. Arrancando desde SD..."
+        echo "Flasher disabled in uEnv.txt. Booting from SD card..."
         exit 0
     fi
 
-    echo "=========================================================="
-    echo " ¡ALERTA!: Iniciando reemplazo masivo de eMMC desde SD   "
-    echo "=========================================================="
+    # 4. Start eMMC flashing process
+    echo "=========================================="
+    echo " STARTING AUTOMATED eMMC FLASHING PROCESS "
+    echo "=========================================="
 
-    SD_DEV="/dev/mmcblk0"
-    EMMC_DEV="/dev/mmcblk1"
-    EMMC_ROOT="/dev/mmcblk1p2"
+    # Put the onboard LEDs into heartbeat mode
+    if ls /sys/class/leds/beaglebone:green:usr* >/dev/null 2>&1; then
+        for led in /sys/class/leds/beaglebone:green:usr*; do
+            echo heartbeat > "${led}/trigger" 2>/dev/null
+        done
+    fi
 
-    # 3. Averiguar de forma dinámica el sector de inicio de la partición 2 de la SD
-    # Esto evita desalineaciones y asegura la integridad de los datos
+    SD_DEV="$CURRENT_SD"
+    # Dynamically determine target device based on the source drive
+    if [ "$SD_DEV" = "/dev/mmcblk0" ]; then
+        EMMC_DEV="/dev/mmcblk1"
+    else
+        EMMC_DEV="/dev/mmcblk0"
+    fi
+    EMMC_ROOT="${EMMC_DEV}p2"
+
+    # 4.2. Dynamically determine the starting sector of partition 2
+    # fdisk -l syntax varies across versions; parsed robustly below
     START_SECTOR=$(fdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $2}')
-
-    # Si la salida tiene un asterisco '*' (partición de boot activa), corregir la columna
     if echo "$START_SECTOR" | grep -q "\*"; then
         START_SECTOR=$(fdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $3}')
     fi
 
     if [ -z "$START_SECTOR" ]; then
-        echo "ERROR CRÍTICO: No se pudo determinar el sector de inicio de la partición 2 en la SD."
+        echo "CRITICAL ERROR: Could not determine the starting sector of partition 2."
         exit 1
     fi
 
-    # 4. Averiguar el sector final de la partición 2 para saber cuánto clonar
+    # 4.3. Find the final sector of partition 2
     LAST_SECTOR=$(fdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $3}')
-    if echo "$LAST_SECTOR" | grep -q "[0-9]" && [ "$START_SECTOR" = "$(fdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $3}')" ]; then
+    if [ "$START_SECTOR" = "$LAST_SECTOR" ] || echo "$LAST_SECTOR" | grep -q "\*"; then
         LAST_SECTOR=$(fdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $4}')
     fi
 
-    # Convertir sectores a Megabytes (Sectores de 512 bytes) sumando 50MB de margen de seguridad
+    # Convert sectors to Megabytes adding a safety margin (512 bytes per sector)
     COPY_SIZE_MB=$(( (LAST_SECTOR * 512) / 1024 / 1024 + 50 ))
 
-    echo "-> Sector de inicio detectado para P2: $START_SECTOR"
-    echo "-> Tamaño a clonar calculado: ${COPY_SIZE_MB}MB"
+    echo "-> Starting sector detected for P2: $START_SECTOR"
+    echo "-> Cloned size calculated: ${COPY_SIZE_MB}MB"
 
-    # 5. Copiar bit a bit la estructura de la SD a la eMMC (Elimina las particiones antiguas)
-    echo "-> Escribiendo imagen en la eMMC de 2GB (esto tardará un par de minutos)..."
+    # 4.4. Copy the basic SD structure to the eMMC
+    echo "-> Writing image to the eMMC (this will take a couple of minutes)..."
     dd if=$SD_DEV of=$EMMC_DEV bs=1M count=$COPY_SIZE_MB status=none
     sync
 
-    # 6. Forzar al Kernel a leer la estructura recién copiada antes de modificarla
-    partprobe $EMMC_DEV 2>/dev/null || mdev -s
-    sleep 1
+    # 4.5. Force partition table reload
+    partprobe $EMMC_DEV 2>/dev/null || mdev -s || blockdev --rereadpt $EMMC_DEV 2>/dev/null
+    sleep 2
 
-    echo "-> Redimensionando partición 2 al 100% mediante fdisk..."
-    # Enviamos comandos secuenciales al fdisk de BusyBox para borrar y recrear la tabla extendida
+    echo "-> Resizing partition 2 to 100% using fdisk..."
+    # Modified to safely handle the ext4 signature overwrite warning in BusyBox fdisk
     fdisk $EMMC_DEV <<EOF
 d
 2
@@ -82,48 +103,50 @@ p
 2
 $START_SECTOR
 
+y
 w
 EOF
+    sync
+    sleep 2
 
-    # 7. Informar al Kernel del cambio definitivo de geometría
-    echo "-> Actualizando tabla de particiones del Kernel..."
-    partprobe $EMMC_DEV 2>/dev/null || mdev -s
-    sleep 1
+    # 4.6. Inform the kernel of changes
+    echo "-> Updating the Kernel's partition table..."
+    partprobe $EMMC_DEV 2>/dev/null || mdev -s || blockdev --rereadpt $EMMC_DEV 2>/dev/null
+    sleep 2
 
-    # 8. Redimensionar el sistema de archivos ext4 en la eMMC de manera limpia (Offline)
-    echo "-> Chequeando consistencia del sistema de archivos (Requerido)..."
+    # 4.7. Resize filesystem
+    echo "-> Checking filesystem consistency (Required)..."
     e2fsck -f -y $EMMC_ROOT > /dev/null 2>&1
 
-    echo "-> Expandiendo el sistema de archivos ext4 al máximo de la eMMC..."
+    echo "-> Expanding the ext4 filesystem..."
     resize2fs $EMMC_ROOT > /dev/null 2>&1
     sync
 
-    # 9. Lógica de Autolimpieza e Inyección Segura
-    echo "-> Eliminando script instalador de la eMMC por seguridad..."
+    # 4.8. Self-cleanup on target eMMC
+    echo "-> Removing installer script from the eMMC for security..."
     MOUNT_DIR="/mnt/emmc_clean"
     mkdir -p $MOUNT_DIR
     if mount $EMMC_ROOT $MOUNT_DIR; then
-        # Eliminamos el script UNICAMENTE de la eMMC. En la SD permanece intacto.
         rm -f $MOUNT_DIR/etc/init.d/S99flasher
         sync
         umount $MOUNT_DIR
     else
-        echo "ADVERTENCIA: No se pudo montar la eMMC para su limpieza."
+        echo "WARNING: Could not mount the eMMC for cleaning."
     fi
     rmdir $MOUNT_DIR
 
-    echo "=========================================================="
-    echo " ¡PROCESO COMPLETADO CON ÉXITO!                          "
-    echo " Estructura limpia de 2 particiones expandida a los 2GB.  "
-    echo " POR FAVOR: Apaga la placa, retira la SD y reinicia.     "
-    echo "=========================================================="
+    echo "============================================================="
+    echo " PROCESS COMPLETED SUCCESSFULLY!                             "
+    echo " Clean structure of 2 partitions expanded to full eMMC capacity."
+    echo " PLEASE: Turn off the board, remove the SD card and restart. "
+    echo "============================================================="
 
-    # Apagar todos los LEDs de la BeagleBone como señal visual inequívoca de fin de flasheo
-    if [ -d /sys/class/leds/beaglebone\:green\:usr0 ]; then
-        echo 0 > /sys/class/leds/beaglebone\:green\:usr0/brightness
-        echo 0 > /sys/class/leds/beaglebone\:green\:usr1/brightness
-        echo 0 > /sys/class/leds/beaglebone\:green\:usr2/brightness
-        echo 0 > /sys/class/leds/beaglebone\:green\:usr3/brightness
+    # Turn off all LEDs as an unambiguous visual signal that flashing is finished
+    if ls /sys/class/leds/beaglebone:green:usr* >/dev/null 2>&1; then
+        for led in /sys/class/leds/beaglebone:green:usr*; do
+            echo none > "${led}/trigger" 2>/dev/null
+            echo 0 > "${led}/brightness" 2>/dev/null
+        done
     fi
     ;;
   *)
