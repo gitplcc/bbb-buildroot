@@ -1,0 +1,2 @@
+#username uid group    gid  password home              shell      groups comment
+butler    -2  butler   -2   =butler  /home/butler      /bin/ash   wheel  Regular user
