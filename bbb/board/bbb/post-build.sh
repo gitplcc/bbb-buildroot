@@ -11,7 +11,9 @@ board/beagleboard/beaglebone/post-build.sh "$@"
 mkdir -p "${TARGET_DIR}/etc/sudoers.d"
 
 # 3. Allow the 'wheel' group to run sudo by entering their own password
-echo "%wheel ALL=(ALL:ALL) ALL" > "${TARGET_DIR}/etc/sudoers.d/wheel"
+SUDOERS_WHEEL="${TARGET_DIR}/etc/sudoers.d/wheel"
+rm -f "${SUDOERS_WHEEL}"
+printf '%s\n' "%wheel ALL=(ALL:ALL) ALL" > "${SUDOERS_WHEEL}"
 
 # 4. Apply the strict permissions required by sudo (0440)
-chmod 0440 "${TARGET_DIR}/etc/sudoers.d/wheel"
+chmod 0440 "${SUDOERS_WHEEL}"
