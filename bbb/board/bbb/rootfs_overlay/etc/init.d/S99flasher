@@ -3,35 +3,45 @@
 
 case "$1" in
   start)
-    # 1. Safety Lock: If the system already booted from the eMMC, exit immediately
-    # Note: Added mmcblk1p2 to cover variations in U-Boot cmdline parameters
-    if grep -qE "root=/dev/mmcblk1" /proc/cmdline; then
-        echo "Booted from eMMC. Operating system is active."
-        exit 0
-    fi
+    # Assume that if this script exists, we have booted from the SD card.
 
-    # 2. Check whether eMMC should be flashed (uEnv.txt emmc_flasher=yes)
+    # 1. Determine SD boot partition and block device
     ROOT_PART=$(awk -F'root=' '{print $2}' /proc/cmdline | awk '{print $1}')
-
     if [ -z "$ROOT_PART" ]; then
         echo "CRITICAL ERROR: Could not determine current root device from boot parameters."
         exit 1
     fi
+    SD_DEV=$(echo $ROOT_PART | sed -E 's/p?[0-9]+$//')
+    SD_DEVBN=$(basename $SD_DEV)
+    if [ "$SD_DEVBN" = "mmcblk0" ]; then
+        EMMC_BLKNUMBER='1'
+        EMMC_BBGBLKNUM='0'
+    else
+        EMMC_BLKNUMBER='0'
+        EMMC_BBGBLKNUM='1'
+    fi
+    EMMC_DEVBN="mmcblk${EMMC_BLKNUMBER}"
+    EMMC_DEV="/dev/$EMMC_DEVBN"
+    EMMC_BOOT="${EMMC_DEV}p1"
+    EMMC_ROOT="${EMMC_DEV}p2"
 
-    CURRENT_SD=$(echo "$ROOT_PART" | sed -E 's/p?[0-9]+$//') # Robust separation
-    BOOT_FAT="${CURRENT_SD}p1"
+    # 2. Check whether eMMC should be flashed (uEnv.txt emmc_flasher=yes)
+    SD_BOOT="/dev/${SD_DEVBN}p1"
     TMP_BOOT="/mnt/sd_boot"
     SHOULD_FLASH="no"
-
     mkdir -p $TMP_BOOT
-    if mount -o ro $BOOT_FAT $TMP_BOOT 2>/dev/null; then
+    if mount -o ro $SD_BOOT $TMP_BOOT 2>/dev/null; then
         # Search if the line emmc_flasher=yes is active
         if grep -q "^emmc_flasher=yes" $TMP_BOOT/uEnv.txt; then
             SHOULD_FLASH="yes"
         fi
-        umount $TMP_BOOT
+        umount $SD_BOOT
+        rmdir $TMP_BOOT
+    else
+        echo "CRITICAL ERROR: Could not mount SD boot partition ($BOOT_FAT) for reading."
+        rmdir $TMP_DIR
+        exit 4
     fi
-    rmdir $TMP_BOOT
 
     # 3. Exit immediately if flashing not requested
     if [ "$SHOULD_FLASH" != "yes" ]; then
@@ -44,38 +54,28 @@ case "$1" in
     echo " STARTING AUTOMATED eMMC FLASHING PROCESS "
     echo "=========================================="
 
-    # Put the onboard LEDs into heartbeat mode
-    if ls /sys/class/leds/beaglebone:green:usr* >/dev/null 2>&1; then
-        for led in /sys/class/leds/beaglebone:green:usr*; do
+    # 4.1. Put the onboard LEDs into heartbeat mode
+    if ls /sys/class/leds/beaglebone:green:* >/dev/null 2>&1; then
+        for led in /sys/class/leds/beaglebone:green:*; do
             echo heartbeat > "${led}/trigger" 2>/dev/null
         done
     fi
 
-    SD_DEV="$CURRENT_SD"
-    # Dynamically determine target device based on the source drive
-    if [ "$SD_DEV" = "/dev/mmcblk0" ]; then
-        EMMC_DEV="/dev/mmcblk1"
-    else
-        EMMC_DEV="/dev/mmcblk0"
-    fi
-    EMMC_ROOT="${EMMC_DEV}p2"
-
     # 4.2. Dynamically determine the starting sector of partition 2
     # fdisk -l syntax varies across versions; parsed robustly below
-    START_SECTOR=$(fdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $2}')
+    START_SECTOR=$(sfdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $2}')
     if echo "$START_SECTOR" | grep -q "\*"; then
-        START_SECTOR=$(fdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $3}')
+        START_SECTOR=$(sfdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $3}')
     fi
-
     if [ -z "$START_SECTOR" ]; then
         echo "CRITICAL ERROR: Could not determine the starting sector of partition 2."
         exit 1
     fi
 
     # 4.3. Find the final sector of partition 2
-    LAST_SECTOR=$(fdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $3}')
+    LAST_SECTOR=$(sfdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $3}')
     if [ "$START_SECTOR" = "$LAST_SECTOR" ] || echo "$LAST_SECTOR" | grep -q "\*"; then
-        LAST_SECTOR=$(fdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $4}')
+        LAST_SECTOR=$(sfdisk -l $SD_DEV | grep "${SD_DEV}p2" | awk '{print $4}')
     fi
 
     # Convert sectors to Megabytes adding a safety margin (512 bytes per sector)
@@ -93,19 +93,8 @@ case "$1" in
     partprobe $EMMC_DEV 2>/dev/null || mdev -s || blockdev --rereadpt $EMMC_DEV 2>/dev/null
     sleep 2
 
-    echo "-> Resizing partition 2 to 100% using fdisk..."
-    # Modified to safely handle the ext4 signature overwrite warning in BusyBox fdisk
-    fdisk $EMMC_DEV <<EOF
-d
-2
-n
-p
-2
-$START_SECTOR
-
-y
-w
-EOF
+    echo "-> Resizing partition 2 to 100% using sfdisk..."
+    echo ',+' | sfdisk -q -N 2 $EMMC_DEV
     sync
     sleep 2
 
@@ -122,18 +111,61 @@ EOF
     resize2fs $EMMC_ROOT > /dev/null 2>&1
     sync
 
-    # 4.8. Self-cleanup on target eMMC
+    # 4.8. Remove flasher service script from eMMC
     echo "-> Removing installer script from the eMMC for security..."
-    MOUNT_DIR="/mnt/emmc_clean"
-    mkdir -p $MOUNT_DIR
-    if mount $EMMC_ROOT $MOUNT_DIR; then
-        rm -f $MOUNT_DIR/etc/init.d/S99flasher
+    TMP_ROOT="/mnt/emmc_root"
+    mkdir -p $TMP_ROOT
+    if mount $EMMC_ROOT $TMP_ROOT; then
+        if [ -f "$TMP_ROOT/etc/init.d/S99flasher" ]; then
+            rm -f "$TMP_ROOT/etc/init.d/S99flasher"
+            echo "   [OK] S99flasher removed from eMMC."
+        fi
         sync
-        umount $MOUNT_DIR
+        umount $TMP_ROOT
+        rmdir $TMP_ROOT
     else
-        echo "WARNING: Could not mount the eMMC for cleaning."
+        echo "CRITICAL ERROR: Could not mount eMMC Root ($EMMC_ROOT) for cleaning."
+        rmdir $TMP_ROOT
+        # Visual panic signaling (all LEDs on)
+        for led in /sys/class/leds/beaglebone:green:usr*; do echo default-on > "${led}/trigger" 2>/dev/null; done
+        exit 4
     fi
-    rmdir $MOUNT_DIR
+
+    # 4.9. Update boot partition in eMMC boot partition
+    echo "-> Updating boot partition to point eMMC root partition..."
+    TMP_BOOT="/mnt/emmc_boot"
+    mkdir -p $TMP_BOOT
+    if mount $EMMC_BOOT $TMP_BOOT; then
+        # Replace SD boot partiton with eMMC boot partition in extlinux.conf
+        UENV_FILE="${TMP_BOOT}/uEnv.txt"
+        CONFIG_FILE="${TMP_BOOT}/extlinux/extlinux.conf"
+        if [ -f "$UENV_FILE" ]; then
+            # Update uEnv.txt to boot from eMMC
+            sed -i "s/bootpart=[0-9]:1/bootpart=${EMMC_BLKNUMBER}:1/g" $UENV_FILE
+            sed -i "s/bootpartition mmcblk[0-9]p2;/bootpartition mmcblk${EMMC_BBGBLKNUM}p2;/g" $UENV_FILE
+            sed -i '/emmc_flasher=/d' $UENV_FILE
+            echo "   [OK] uEnv.txt updated to boot from on board eMMC."
+        else
+            echo "WARNING: uEnv.txt not found at standard path. Verify U-Boot setup."
+        fi
+        if [ -f "$CONFIG_FILE" ]; then
+            # Update extlinux.conf to boot from eMMC
+            sed -i "s/root=\/dev\/mmcblk[0-9]p2/root=\/dev\/mmcblk${EMMC_BLKNUMBER}p2/g" "$CONFIG_FILE"
+            echo "   [OK] extlinux.conf updated to boot from on board eMMC."
+        else
+            echo "WARNING: extlinux.conf not found at standard path. Verify U-Boot setup."
+        fi
+        sync
+        umount $TMP_BOOT
+        rmdir  $TMP_BOOT
+    else
+        echo "CRITICAL ERROR: Could not mount eMMC Boot ($EMMC_BOOT) to update bootloader."
+        rmdir $TMP_BOOT
+        # Visual panic signaling (all LEDs on)
+        for led in /sys/class/leds/beaglebone:green:usr*; do echo default-on > "${led}/trigger" 2>/dev/null; done
+        rmdir  $TMP_BOOT
+        exit 4
+    fi
 
     echo "============================================================="
     echo " PROCESS COMPLETED SUCCESSFULLY!                             "
@@ -142,8 +174,8 @@ EOF
     echo "============================================================="
 
     # Turn off all LEDs as an unambiguous visual signal that flashing is finished
-    if ls /sys/class/leds/beaglebone:green:usr* >/dev/null 2>&1; then
-        for led in /sys/class/leds/beaglebone:green:usr*; do
+    if ls /sys/class/leds/beaglebone:green:* >/dev/null 2>&1; then
+        for led in /sys/class/leds/beaglebone:green:*; do
             echo none > "${led}/trigger" 2>/dev/null
             echo 0 > "${led}/brightness" 2>/dev/null
         done
