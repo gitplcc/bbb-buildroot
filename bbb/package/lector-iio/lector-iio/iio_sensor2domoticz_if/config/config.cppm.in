@@ -1,0 +1,21 @@
+module;
+
+#include <string_view>
+
+export module iio_sensor2domoticz_if.config;
+
+export namespace IIOSensor2DomoticzIf::Config {
+inline constexpr std::string_view Name{"@CMAKE_PROJECT_NAME@"};
+inline constexpr std::string_view Version{"@CMAKE_PROJECT_VERSION@"};
+inline constexpr std::string_view IioDevId{"bme280"};
+inline constexpr std::string_view PublisherClientId{"bme280_publisher"};
+inline constexpr std::string_view BrokerUrl{"tcp://localhost:1883"};
+inline constexpr std::string_view BrokerTopic{"domoticz/in"};
+inline constexpr std::string_view ConfigPath{"@DAEMON_CONFIG_PATH@"};
+/*
+inline constexpr std::string_view run_dir{"@DAEMON_RUN_DIR@"};
+inline constexpr std::string_view data_dir{"@DAEMON_DATA_DIR@"};
+ */
+// Convert CMake's 0/1 boolean into a native C++ bool
+// inline constexpr bool has_systemd = @HAVE_SYSTEMD_BOOL @;
+}  // namespace IIOSensor2DomoticzIf::Config
