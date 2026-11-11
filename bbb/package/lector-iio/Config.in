@@ -1,9 +1,18 @@
 config BR2_PACKAGE_LECTOR_IIO
 	bool "lector-iio"
+	select BR2_HOST_CMAKE_AT_LEAST_3_30
+    depends on BR2_INSTALL_LIBSTDCPP && BR2_TOOLCHAIN_HAS_THREADS # paho_mqtt_cpp && spdlog
+    depends on !BR2_TOOLCHAIN_HAS_GCC_BUG_64735  # paho_mqtt_cpp
+    depends on BR2_USE_WCHAR  # spdlog
 	select BR2_PACKAGE_LIBIIO
+	select BR2_PACKAGE_PAHO_MQTT_CPP
+    select BR2_PACKAGE_CLI11
+    select BR2_PACKAGE_SPDLOG
 	help
-	  Custom application in C to read the analog channels of IIO
-	  of the BeagleBone Black.
+	  Custom application for reading analog channels through IIO.
 
-comment "lector-iio needs the libiio library"
-	depends on !BR2_PACKAGE_LIBIIO
+comment "lector-iio needs a toolchain w/ C++, thread support & MMU"
+	depends on !BR2_INSTALL_LIBSTDCPP || \
+	           !BR2_TOOLCHAIN_HAS_THREADS || \
+               BR2_TOOLCHAIN_HAS_GCC_BUG_64735 || \
+               !BR2_USE_WCHAR

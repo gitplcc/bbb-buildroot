@@ -1,0 +1,22 @@
+[Unit]
+Description=Injects local I2C connected bme280 sensor data into Domoticz through MQTT
+After=network.target
+
+[Service]
+Type=simple
+User=lector-iio
+Group=lector-iio
+ExecStart=/usr/bin/lector-iio -c /etc/lector-iio/lector-iio.conf
+Restart=on-failure
+RestartSec=5s
+
+# Hardening & eMMC Protection
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+# If your app must write state to eMMC, explicitly whitelist only that folder:
+# StateDirectory=lector-iio
+
+[Install]
+WantedBy=multi-user.target
