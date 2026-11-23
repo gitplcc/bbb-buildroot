@@ -20,6 +20,7 @@ target_sources(${DAEMON_NAME}
                 iio_sensor2domoticz_if/app_config.cppm
                 iio_sensor2domoticz_if/barometric_forecaster.cppm
                 iio_sensor2domoticz_if/sensor_interface.cppm
+                iio_sensor2domoticz_if/thermal_comfort_calculator.cppm
                 "${PROJECT_BINARY_DIR}/generated/config.cppm"
 )
 target_compile_features(${DAEMON_NAME} PUBLIC cxx_std_23)

@@ -1,0 +1,136 @@
+Engine: ConfortInteriores
+InputVariable: Temperatura
+  enabled: true
+  range: 10.000 35.000
+  lock-range: false
+  term: Fria Trapezoid 10.000 10.000 17.000 20.000
+  term: Confortable Trapezoid 18.500 20.500 23.500 25.500
+  term: Calida Trapezoid 24.000 27.000 35.000 35.000
+
+InputVariable: Humedad
+  enabled: true
+  range: 0.000 100.000
+  lock-range: false
+  term: Seca Trapezoid 0.000 0.000 30.000 42.000
+  term: Optima Trapezoid 38.000 45.000 55.000 62.000
+  term: Humeda Trapezoid 58.000 70.000 100.000 100.000
+
+InputVariable: Presion
+  enabled: true
+  range: 950.000 1050.000
+  lock-range: false
+  term: Baja Trapezoid 950.000 950.000 995.000 1008.000
+  term: Normal Trapezoid 1002.000 1010.000 1020.000 1028.000
+  term: Alta Trapezoid 1022.000 1032.000 1050.000 1050.000
+
+InputVariable: Estacion
+  enabled: true
+  range: -1.000 1.000
+  lock-range: false
+  term: Invierno Trapezoid -1.000 -1.000 -0.500 0.000
+  term: Entretiempo Triangle -0.400 0.000 0.400
+  term: Verano Trapezoid 0.000 0.500 1.000 1.000
+
+OutputVariable: Confort
+  enabled: true
+  range: 0.000 100.000
+  lock-range: false
+  aggregation: Maximum
+  defuzzifier: Centroid 100
+  default: 50.000
+  lock-previous: false
+  term: MuyBajo Triangle 0.000 12.500 25.000
+  term: Bajo Triangle 20.000 35.000 50.000
+  term: Medio Triangle 45.000 60.000 75.000
+  term: Alto Triangle 70.000 85.000 100.000
+
+RuleBlock: ReglasConfort
+  enabled: true
+  conjunction: Minimum
+  disjunction: Maximum
+  implication: Minimum
+  activation: General
+
+  # --- BLOQUE 1: TEMPERATURA FRÍA (27 reglas) ---
+  # Fria + Seca
+  rule: if Temperatura is Fria and Humedad is Seca and Presion is Baja and Estacion is Invierno then Confort is Bajo
+  rule: if Temperatura is Fria and Humedad is Seca and Presion is Baja and Estacion is Entretiempo then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Seca and Presion is Baja and Estacion is Verano then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Seca and Presion is Normal and Estacion is Invierno then Confort is Bajo
+  rule: if Temperatura is Fria and Humedad is Seca and Presion is Normal and Estacion is Entretiempo then Confort is Bajo
+  rule: if Temperatura is Fria and Humedad is Seca and Presion is Normal and Estacion is Verano then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Seca and Presion is Alta and Estacion is Invierno then Confort is Bajo
+  rule: if Temperatura is Fria and Humedad is Seca and Presion is Alta and Estacion is Entretiempo then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Seca and Presion is Alta and Estacion is Verano then Confort is MuyBajo
+
+  # Fria + Optima
+  rule: if Temperatura is Fria and Humedad is Optima and Presion is Baja and Estacion is Invierno then Confort is Medio
+  rule: if Temperatura is Fria and Humedad is Optima and Presion is Baja and Estacion is Entretiempo then Confort is Bajo
+  rule: if Temperatura is Fria and Humedad is Optima and Presion is Baja and Estacion is Verano then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Optima and Presion is Normal and Estacion is Invierno then Confort is Medio
+  rule: if Temperatura is Fria and Humedad is Optima and Presion is Normal and Estacion is Entretiempo then Confort is Bajo
+  rule: if Temperatura is Fria and Humedad is Optima and Presion is Normal and Estacion is Verano then Confort is Bajo
+  rule: if Temperatura is Fria and Humedad is Optima and Presion is Alta and Estacion is Invierno then Confort is Medio
+  rule: if Temperatura is Fria and Humedad is Optima and Presion is Alta and Estacion is Entretiempo then Confort is Bajo
+  rule: if Temperatura is Fria and Humedad is Optima and Presion is Alta and Estacion is Verano then Confort is Bajo
+
+  # Fria + Humeda (frío húmedo cala más)
+  rule: if Temperatura is Fria and Humedad is Humeda and Presion is Baja and Estacion is Invierno then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Humeda and Presion is Baja and Estacion is Entretiempo then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Humeda and Presion is Baja and Estacion is Verano then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Humeda and Presion is Normal and Estacion is Invierno then Confort is Bajo
+  rule: if Temperatura is Fria and Humedad is Humeda and Presion is Normal and Estacion is Entretiempo then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Humeda and Presion is Normal and Estacion is Verano then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Humeda and Presion is Alta and Estacion is Invierno then Confort is Bajo
+  rule: if Temperatura is Fria and Humedad is Humeda and Presion is Alta and Estacion is Entretiempo then Confort is MuyBajo
+  rule: if Temperatura is Fria and Humedad is Humeda and Presion is Alta and Estacion is Verano then Confort is MuyBajo
+
+  # --- BLOQUE 2: TEMPERATURA CONFORTABLE (27 reglas) ---
+  # Confortable + Seca
+  rule: if Temperatura is Confortable and Humedad is Seca and Presion is Baja and Estacion is Invierno then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Seca and Presion is Baja and Estacion is Entretiempo then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Seca and Presion is Baja and Estacion is Verano then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Seca and Presion is Normal and Estacion is Invierno then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Seca and Presion is Normal and Estacion is Entretiempo then Confort is Alto
+  rule: if Temperatura is Confortable and Humedad is Seca and Presion is Normal and Estacion is Verano then Confort is Alto
+  rule: if Temperatura is Confortable and Humedad is Seca and Presion is Alta and Estacion is Invierno then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Seca and Presion is Alta and Estacion is Entretiempo then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Seca and Presion is Alta and Estacion is Verano then Confort is Medio
+
+  # Confortable + Optima (zona ideal)
+  rule: if Temperatura is Confortable and Humedad is Optima and Presion is Baja and Estacion is Invierno then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Optima and Presion is Baja and Estacion is Entretiempo then Confort is Alto
+  rule: if Temperatura is Confortable and Humedad is Optima and Presion is Baja and Estacion is Verano then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Optima and Presion is Normal and Estacion is Invierno then Confort is Alto
+  rule: if Temperatura is Confortable and Humedad is Optima and Presion is Normal and Estacion is Entretiempo then Confort is Alto
+  rule: if Temperatura is Confortable and Humedad is Optima and Presion is Normal and Estacion is Verano then Confort is Alto
+  rule: if Temperatura is Confortable and Humedad is Optima and Presion is Alta and Estacion is Invierno then Confort is Alto
+  rule: if Temperatura is Confortable and Humedad is Optima and Presion is Alta and Estacion is Entretiempo then Confort is Alto
+  rule: if Temperatura is Confortable and Humedad is Optima and Presion is Alta and Estacion is Verano then Confort is Alto
+
+  # Confortable + Humeda
+  rule: if Temperatura is Confortable and Humedad is Humeda and Presion is Baja and Estacion is Invierno then Confort is Bajo
+  rule: if Temperatura is Confortable and Humedad is Humeda and Presion is Baja and Estacion is Entretiempo then Confort is Bajo
+  rule: if Temperatura is Confortable and Humedad is Humeda and Presion is Baja and Estacion is Verano then Confort is MuyBajo
+  rule: if Temperatura is Confortable and Humedad is Humeda and Presion is Normal and Estacion is Invierno then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Humeda and Presion is Normal and Estacion is Entretiempo then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Humeda and Presion is Normal and Estacion is Verano then Confort is Bajo
+  rule: if Temperatura is Confortable and Humedad is Humeda and Presion is Alta and Estacion is Invierno then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Humeda and Presion is Alta and Estacion is Entretiempo then Confort is Medio
+  rule: if Temperatura is Confortable and Humedad is Humeda and Presion is Alta and Estacion is Verano then Confort is Bajo
+
+  # --- BLOQUE 3: TEMPERATURA CÁLIDA (27 reglas) ---
+  # Calida + Seca (calor seco es más tolerable en verano)
+  rule: if Temperatura is Calida and Humedad is Seca and Presion is Baja and Estacion is Invierno then Confort is Bajo
+  rule: if Temperatura is Calida and Humedad is Seca and Presion is Baja and Estacion is Entretiempo then Confort is Bajo
+  rule: if Temperatura is Calida and Humedad is Seca and Presion is Baja and Estacion is Verano then Confort is Medio
+  rule: if Temperatura is Calida and Humedad is Seca and Presion is Normal and Estacion is Invierno then Confort is Bajo
+  rule: if Temperatura is Calida and Humedad is Seca and Presion is Normal and Estacion is Entretiempo then Confort is Medio
+  rule: if Temperatura is Calida and Humedad is Seca and Presion is Normal and Estacion is Verano then Confort is Medio
+  rule: if Temperatura is Calida and Humedad is Seca and Presion is Alta and Estacion is Invierno then Confort is Bajo
+  rule: if Temperatura is Calida and Humedad is Seca and Presion is Alta and Estacion is Entretiempo then Confort is Bajo
+  rule: if Temperatura is Calida and Humedad is Seca and Presion is Alta and Estacion is Verano then Confort is Medio
+
+  # Calida + Optima
+  rule: if Temperatura is Calida and Humedad is Optima and Presion is Baja and Estacion is Invierno then Confort is MuyBajo
+  rule: if Temperatura is Calida and Humedad is Optima and Presion is Baja and Estacion is Entretiempo then Confort is Bajo
